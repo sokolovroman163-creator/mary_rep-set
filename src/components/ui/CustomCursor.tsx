@@ -9,7 +9,7 @@ export default function CustomCursor() {
     const [clicked, setClicked] = useState(false);
     const [linkHovered, setLinkHovered] = useState(false);
     const [inputHovered, setInputHovered] = useState(false);
-    const [hidden, setHidden] = useState(false);
+    const [hidden, setHidden] = useState(true); // hidden until first mouse move
 
     useEffect(() => {
         setMounted(true);
