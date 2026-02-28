@@ -60,6 +60,8 @@ export default function CustomCursor() {
     if (!mounted) return null;
 
     const size = clicked ? 24 : linkHovered ? 64 : 32;
+    const cursorWidth = inputHovered ? 4 : size;
+    const cursorHeight = inputHovered ? 48 : size;
     const offset = size / 2;
 
     return (
@@ -68,8 +70,8 @@ export default function CustomCursor() {
             style={{
                 x: springX,
                 y: springY,
-                width: size,
-                height: size,
+                width: cursorWidth,
+                height: cursorHeight,
                 marginLeft: offset - 16,
                 marginTop: offset - 16,
                 opacity: visible ? 1 : 0,
@@ -83,8 +85,6 @@ export default function CustomCursor() {
                         ? "2px solid rgba(255,255,255,0.8)"
                         : "1px solid rgba(255,255,255,0.5)"
                     : "none",
-                width: inputHovered ? 4 : size,
-                height: inputHovered ? 48 : size,
                 mixBlendMode: inputHovered ? "normal" : "difference",
                 transition: "width 0.2s, height 0.2s, background-color 0.2s, opacity 0.2s",
             }}
