@@ -1,44 +1,36 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useSpring } from "framer-motion";
 
 export default function CustomCursor() {
     const [mounted, setMounted] = useState(false);
-    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [visible, setVisible] = useState(false);
     const [clicked, setClicked] = useState(false);
     const [linkHovered, setLinkHovered] = useState(false);
     const [inputHovered, setInputHovered] = useState(false);
-    const [hidden, setHidden] = useState(true); // hidden until first mouse move
+
+    const cursorX = useMotionValue(-200);
+    const cursorY = useMotionValue(-200);
+
+    const springX = useSpring(cursorX, { stiffness: 500, damping: 28, mass: 0.5 });
+    const springY = useSpring(cursorY, { stiffness: 500, damping: 28, mass: 0.5 });
 
     useEffect(() => {
         setMounted(true);
-        const addEventListeners = () => {
-            document.addEventListener("mousemove", onMouseMove);
-            document.addEventListener("mouseenter", onMouseEnter);
-            document.addEventListener("mouseleave", onMouseLeave);
-            document.addEventListener("mousedown", onMouseDown);
-            document.addEventListener("mouseup", onMouseUp);
-        };
-
-        const removeEventListeners = () => {
-            document.removeEventListener("mousemove", onMouseMove);
-            document.removeEventListener("mouseenter", onMouseEnter);
-            document.removeEventListener("mouseleave", onMouseLeave);
-            document.removeEventListener("mousedown", onMouseDown);
-            document.removeEventListener("mouseup", onMouseUp);
-        };
 
         const onMouseMove = (e: MouseEvent) => {
-            setPosition({ x: e.clientX, y: e.clientY });
+            cursorX.set(e.clientX - 16);
+            cursorY.set(e.clientY - 16);
+            if (!visible) setVisible(true);
         };
 
         const onMouseDown = () => setClicked(true);
         const onMouseUp = () => setClicked(false);
-        const onMouseEnter = () => setHidden(false);
-        const onMouseLeave = () => setHidden(true);
+        const onMouseLeave = () => setVisible(false);
+        const onMouseEnter = () => setVisible(true);
 
-        const handleLinkHoverEvents = () => {
+        const handleLinkHover = () => {
             document.querySelectorAll("a, button, [role='button']").forEach(el => {
                 el.addEventListener("mouseenter", () => setLinkHovered(true));
                 el.addEventListener("mouseleave", () => setLinkHovered(false));
@@ -49,80 +41,57 @@ export default function CustomCursor() {
             });
         };
 
-        addEventListeners();
-        handleLinkHoverEvents();
+        window.addEventListener("mousemove", onMouseMove);
+        window.addEventListener("mousedown", onMouseDown);
+        window.addEventListener("mouseup", onMouseUp);
+        document.documentElement.addEventListener("mouseleave", onMouseLeave);
+        document.documentElement.addEventListener("mouseenter", onMouseEnter);
+        handleLinkHover();
 
-        return () => removeEventListeners();
-    }, []);
+        return () => {
+            window.removeEventListener("mousemove", onMouseMove);
+            window.removeEventListener("mousedown", onMouseDown);
+            window.removeEventListener("mouseup", onMouseUp);
+            document.documentElement.removeEventListener("mouseleave", onMouseLeave);
+            document.documentElement.removeEventListener("mouseenter", onMouseEnter);
+        };
+    }, [cursorX, cursorY, visible]);
 
     if (!mounted) return null;
 
-    const cursorVariants = {
-        default: {
-            height: 32,
-            width: 32,
-            x: position.x - 16,
-            y: position.y - 16,
-            borderRadius: "50%",
-            backgroundColor: "rgba(255, 255, 255, 0.1)",
-            border: "1px solid rgba(255, 255, 255, 0.5)",
-            mixBlendMode: "difference" as any,
-        },
-        click: {
-            height: 24,
-            width: 24,
-            x: position.x - 12,
-            y: position.y - 12,
-            borderRadius: "50%",
-            backgroundColor: "rgba(255, 255, 255, 0.8)",
-            mixBlendMode: "difference" as any,
-        },
-        hoverLink: {
-            height: 64,
-            width: 64,
-            x: position.x - 32,
-            y: position.y - 32,
-            borderRadius: "50%",
-            backgroundColor: "rgba(255, 255, 255, 0.05)",
-            border: "2px solid rgba(255, 255, 255, 0.8)",
-            mixBlendMode: "difference" as any,
-        },
-        hoverInput: {
-            height: 48,
-            width: 4,
-            x: position.x - 2,
-            y: position.y - 24,
-            borderRadius: "4px",
-            backgroundColor: "rgba(255, 255, 255, 0.9)",
-            border: "none",
-            mixBlendMode: "normal" as any,
-        }
-    };
-
-    let activeVariant = "default";
-    if (clicked) activeVariant = "click";
-    else if (inputHovered) activeVariant = "hoverInput";
-    else if (linkHovered) activeVariant = "hoverLink";
+    const size = clicked ? 24 : linkHovered ? 64 : 32;
+    const offset = size / 2;
 
     return (
-        <>
-            <motion.div
-                className="fixed top-0 left-0 z-[9999] pointer-events-none flex items-center justify-center"
-                variants={cursorVariants}
-                animate={activeVariant}
-                transition={{
-                    type: "spring",
-                    stiffness: 500,
-                    damping: 28,
-                    mass: 0.5
-                }}
-                initial="default"
-                style={{ opacity: hidden ? 0 : 1 }}
-            >
-                {activeVariant === "default" && (
-                    <div className="w-1 h-1 bg-white rounded-full"></div> // "compass" center point hint
-                )}
-            </motion.div>
-        </>
+        <motion.div
+            className="fixed top-0 left-0 z-[9999] pointer-events-none rounded-full flex items-center justify-center"
+            style={{
+                x: springX,
+                y: springY,
+                width: size,
+                height: size,
+                marginLeft: offset - 16,
+                marginTop: offset - 16,
+                opacity: visible ? 1 : 0,
+                backgroundColor: inputHovered
+                    ? "rgba(255,255,255,0.9)"
+                    : clicked
+                        ? "rgba(255,255,255,0.8)"
+                        : "rgba(255,255,255,0.08)",
+                border: !clicked && !inputHovered
+                    ? linkHovered
+                        ? "2px solid rgba(255,255,255,0.8)"
+                        : "1px solid rgba(255,255,255,0.5)"
+                    : "none",
+                width: inputHovered ? 4 : size,
+                height: inputHovered ? 48 : size,
+                mixBlendMode: inputHovered ? "normal" : "difference",
+                transition: "width 0.2s, height 0.2s, background-color 0.2s, opacity 0.2s",
+            }}
+        >
+            {!clicked && !linkHovered && !inputHovered && (
+                <div className="w-1 h-1 bg-white rounded-full" />
+            )}
+        </motion.div>
     );
 }
